@@ -413,6 +413,7 @@ def ensure_daemon(
 	cloud_profile_id: str | None = None,
 	cloud_proxy_country_code: str | None = None,
 	cloud_timeout: int | None = None,
+	user_data_dir: str | None = None,
 ) -> None:
 	"""Start daemon if not running. Uses state file for phase-aware decisions."""
 	probe = _probe_session(session)
@@ -505,6 +506,8 @@ def ensure_daemon(
 		cmd.extend(['--cloud-proxy-country', cloud_proxy_country_code])
 	if cloud_timeout is not None:
 		cmd.extend(['--cloud-timeout', str(cloud_timeout)])
+	if user_data_dir:
+		cmd.extend(['--user-data-dir', user_data_dir])
 
 	# Set up environment
 	env = os.environ.copy()
@@ -637,6 +640,7 @@ Setup:
 		default=False,
 		help='(Deprecated) Use "browser-use connect" instead',
 	)
+	parser.add_argument('--user-data-dir', help='Path to browser user data directory')
 	parser.add_argument('--session', default=None, help='Session name (default: "default")')
 	parser.add_argument('--json', action='store_true', help='Output as JSON')
 	parser.add_argument('--mcp', action='store_true', help='Run as MCP server (JSON-RPC via stdin/stdout)')
@@ -1427,12 +1431,16 @@ def main() -> int:
 	_migrate_legacy_files()
 
 	# Ensure daemon is running
-	explicit_config = any(flag in sys.argv for flag in ('--headed', '--profile', '--cdp-url'))
-	ensure_daemon(args.headed, args.profile, args.cdp_url, session=session, explicit_config=explicit_config)
+	explicit_config = any(flag in sys.argv for flag in ('--headed', '--profile', '--cdp-url', '--connect', '--user-data-dir'))
+	ensure_daemon(
+		args.headed, args.profile, args.cdp_url,
+		session=session, explicit_config=explicit_config,
+		user_data_dir=getattr(args, 'user_data_dir', None),
+	)
 
 	# Build params from args
 	params = {}
-	skip_keys = {'command', 'headed', 'json', 'cdp_url', 'session', 'connect'}
+	skip_keys = {'command', 'headed', 'json', 'cdp_url', 'session', 'connect', 'user_data_dir'}
 
 	for key, value in vars(args).items():
 		if key not in skip_keys and value is not None:

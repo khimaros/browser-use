@@ -28,6 +28,7 @@ class SessionInfo:
 	actions: ActionHandler | None = None
 	python_session: PythonSession = field(default_factory=PythonSession)
 	use_cloud: bool = False
+	user_data_dir: str | None = None
 
 
 async def create_browser_session(
@@ -38,6 +39,7 @@ async def create_browser_session(
 	cloud_profile_id: str | None = None,
 	cloud_proxy_country_code: str | None = None,
 	cloud_timeout: int | None = None,
+	user_data_dir: str | None = None,
 ) -> CLIBrowserSession:
 	"""Create BrowserSession based on connection mode.
 
@@ -60,7 +62,7 @@ async def create_browser_session(
 		return CLIBrowserSession(**kwargs)  # type: ignore[call-arg]
 
 	if profile is None:
-		return CLIBrowserSession(headless=not headed)  # type: ignore[call-arg]
+		return CLIBrowserSession(headless=not headed, user_data_dir=user_data_dir)  # type: ignore[call-arg]
 
 	from browser_use.skill_cli.utils import find_chrome_executable, get_chrome_profile_path, list_chrome_profiles
 
@@ -69,7 +71,7 @@ async def create_browser_session(
 		raise RuntimeError('Could not find Chrome executable. Please install Chrome or omit --profile to use Chromium.')
 
 	# Always get the Chrome user data directory (not the profile subdirectory)
-	user_data_dir = get_chrome_profile_path(None)
+	final_user_data_dir = user_data_dir if user_data_dir else get_chrome_profile_path(None)
 
 	# Resolve profile: accept directory names ("Default", "Profile 1") and
 	# display names ("Person 1", "Work"). Directory names take precedence.
@@ -102,7 +104,7 @@ async def create_browser_session(
 
 	return CLIBrowserSession(
 		executable_path=chrome_path,  # type: ignore[call-arg]
-		user_data_dir=user_data_dir,  # type: ignore[call-arg]
+		user_data_dir=final_user_data_dir,  # type: ignore[call-arg]
 		profile_directory=profile_directory,  # type: ignore[call-arg]
 		headless=not headed,  # type: ignore[call-arg]
 	)
